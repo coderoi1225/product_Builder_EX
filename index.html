@@ -1,14 +1,306 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>술안주 추천기 v2 (쏘맥 포함)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    body { margin: 0; background: #f6f7fb; color: #111; }
+    .wrap { max-width: 780px; margin: 40px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p.sub { margin: 0 0 18px; color: #555; line-height: 1.5; }
+    .grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr 1fr; }
+    label { display:block; font-size: 13px; color:#333; margin-bottom: 6px; }
+    select, button { width: 100%; padding: 12px 12px; border-radius: 12px; border: 1px solid #dfe3ea; background: #fff; font-size: 15px; }
+    .btnRow { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    button { border: none; cursor: pointer; background: #111; color: #fff; font-weight: 800; transition: transform .05s ease-in-out, opacity .2s ease; }
+    button.secondary { background: #2a3550; }
+    button:active { transform: scale(0.99); }
+    button:hover { opacity: 0.92; }
+    .result { margin-top: 16px; padding: 14px; border-radius: 14px; background: #0b1220; color: #fff; min-height: 110px; }
+    .badge { display:inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.12); font-size: 12px; margin-right: 6px; }
+    .menu { font-size: 18px; font-weight: 900; margin: 10px 0 6px; }
+    .meta { margin: 6px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; }
+    .reason { margin-top: 8px; color: rgba(255,255,255,0.85); line-height: 1.5; }
+    .footer { margin-top: 12px; color:#666; font-size: 12px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .btnRow{grid-template-columns:1fr;} }
+  </style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+  <div class="wrap">
+    <div class="card">
+      <h1>🍶🍺 술안주 추천기 v2 (쏘맥 포함)</h1>
+      <p class="sub">술 + 카테고리 + 상황(혼술/2인/모임)을 고르면, 찰떡 안주와 <b>1인분 칼로리</b>를 함께 알려줘요.</p>
+
+      <div class="grid">
+        <div>
+          <label for="alcohol">술 종류</label>
+          <select id="alcohol">
+            <option value="soju">소주</option>
+            <option value="beer">맥주</option>
+            <option value="somaek">쏘맥</option>
+            <option value="makgeolli">막걸리</option>
+            <option value="wine">와인</option>
+            <option value="whisky">위스키</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="cuisine">카테고리</label>
+          <select id="cuisine">
+            <option value="korean">한식</option>
+            <option value="chinese">중식</option>
+            <option value="japanese">일식</option>
+            <option value="western">양식</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="situation">상황</label>
+          <select id="situation">
+            <option value="solo">혼술</option>
+            <option value="two">2인</option>
+            <option value="group">모임</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btnRow">
+        <button id="btnRecommend">추천 받기</button>
+        <button id="btnAnother" class="secondary">다른 추천</button>
+      </div>
+
+      <div class="result" id="result" aria-live="polite">
+        <div>
+          <span class="badge">술</span>
+          <span class="badge">카테고리</span>
+          <span class="badge">상황</span>
+        </div>
+        <div class="menu">버튼을 눌러 추천을 받아보세요 🙂</div>
+        <div class="reason">예: 쏘맥 + 한식 + 모임 → 치킨/삼겹살/튀김 같은 “강한 안주”가 잘 맞아요!</div>
+      </div>
+
+      <div class="footer">※ 칼로리는 1인분 대략치(참고용)예요. 브랜드/조리법에 따라 달라질 수 있어요 😅</div>
+    </div>
+  </div>
+
+  <script>
+    // tags: ["solo","two","group"] => 해당 상황에 적합
+    // kcal: 1인분 기준 대략치
+    const data = {
+      soju: {
+        korean: [
+          { menu: "두부김치", kcal: 380, tags: ["solo","two","group"], reason: "담백+매콤 조합이 소주와 찰떡이에요." },
+          { menu: "삼겹살 + 김치", kcal: 720, tags: ["two","group"], reason: "기름진 맛을 소주가 깔끔하게 정리해줘요." },
+          { menu: "닭발", kcal: 520, tags: ["two","group"], reason: "매운맛+소주 조합은 클래식! 한 잔이 술술." },
+          { menu: "오뎅탕", kcal: 260, tags: ["solo","two","group"], reason: "따뜻한 국물로 페이스 조절에 좋아요." },
+          { menu: "제육볶음", kcal: 610, tags: ["two","group"], reason: "감칠맛 강한 양념이 소주와 잘 맞아요." },
+        ],
+        chinese: [
+          { menu: "탕수육", kcal: 680, tags: ["two","group"], reason: "달콤새콤 소스가 소주의 쓴맛을 중화해줘요." },
+          { menu: "깐풍기", kcal: 640, tags: ["two","group"], reason: "짭짤+매콤 소스가 소주와 궁합 좋아요." },
+          { menu: "마라탕(맵기 조절)", kcal: 560, tags: ["solo","two","group"], reason: "얼얼한 맛을 소주가 깔끔하게 눌러줘요." },
+        ],
+        japanese: [
+          { menu: "야키토리(닭꼬치)", kcal: 420, tags: ["solo","two","group"], reason: "짭짤한 간장 베이스가 소주와 잘 맞아요." },
+          { menu: "가라아게", kcal: 510, tags: ["two","group"], reason: "튀김의 고소함을 소주가 정리해줘요." },
+          { menu: "오뎅탕", kcal: 260, tags: ["solo","two","group"], reason: "따뜻한 국물 안주로 소주 페이스 조절!" },
+        ],
+        western: [
+          { menu: "감바스 + 바게트", kcal: 530, tags: ["two","group"], reason: "마늘/올리브오일 향을 소주가 산뜻하게 잡아줘요." },
+          { menu: "핫윙", kcal: 580, tags: ["two","group"], reason: "짭짤+매콤한 맛에 소주가 잘 들어가요." },
+          { menu: "스테이크(미디엄)", kcal: 780, tags: ["two","group"], reason: "고기 풍미를 소주가 의외로 깔끔하게 씻어줘요." },
+        ]
+      },
+
+      beer: {
+        korean: [
+          { menu: "치킨(후라이드)", kcal: 720, tags: ["two","group"], reason: "말이 필요 없는 치맥 국룰!" },
+          { menu: "떡볶이", kcal: 510, tags: ["solo","two","group"], reason: "매콤달콤함을 탄산이 시원하게 씻어줘요." },
+          { menu: "오징어채/마른안주", kcal: 220, tags: ["solo","two","group"], reason: "가벼운 짭짤함 + 맥주, 혼술에도 딱." },
+          { menu: "감자전", kcal: 430, tags: ["two","group"], reason: "바삭+고소한 맛에 라거가 딱 좋아요." },
+        ],
+        chinese: [
+          { menu: "군만두", kcal: 460, tags: ["solo","two","group"], reason: "기름진 만두를 맥주 탄산이 정리해줘요." },
+          { menu: "양꼬치", kcal: 690, tags: ["two","group"], reason: "향신료 풍미와 맥주의 청량감이 좋아요." },
+          { menu: "마라샹궈", kcal: 740, tags: ["two","group"], reason: "얼얼한 맛에 시원한 맥주가 잘 맞아요." },
+        ],
+        japanese: [
+          { menu: "에다마메(풋콩)", kcal: 160, tags: ["solo","two","group"], reason: "가벼운 스타터로 최고!" },
+          { menu: "타코야키", kcal: 420, tags: ["two","group"], reason: "소스 감칠맛 + 맥주 조합이 찰떡이에요." },
+          { menu: "가라아게", kcal: 510, tags: ["two","group"], reason: "바삭한 튀김과 맥주의 조합은 안정적!" },
+        ],
+        western: [
+          { menu: "피자(페퍼로니/고르곤졸라)", kcal: 820, tags: ["group"], reason: "공유형 최강. 치즈+탄산 조합은 정답!" },
+          { menu: "나초 + 살사", kcal: 390, tags: ["solo","two","group"], reason: "가볍게 집어먹기 좋고 맥주랑 잘 맞아요." },
+          { menu: "버팔로 윙", kcal: 610, tags: ["two","group"], reason: "매콤한 소스에 맥주 한 모금이면 리셋!" },
+          { menu: "소시지 플래터", kcal: 760, tags: ["group"], reason: "다 같이 먹기 좋고 짭짤함이 맥주랑 찰떡." },
+        ]
+      },
+
+      // ✅ 쏘맥 추가
+      somaek: {
+        korean: [
+          { menu: "치킨(후라이드)", kcal: 720, tags: ["two","group"], reason: "쏘맥의 강한 타격감에 기름진 치킨이 딱 맞아요." },
+          { menu: "삼겹살 + 김치", kcal: 720, tags: ["two","group"], reason: "기름짐+탄산+알코올 조합으로 시원하게 정리!" },
+          { menu: "닭갈비", kcal: 680, tags: ["two","group"], reason: "매콤한 양념에 쏘맥 한 모금이면 스트레스 해소." },
+          { menu: "오징어튀김", kcal: 540, tags: ["two","group"], reason: "튀김류의 짭짤함이 쏘맥과 잘 맞아요." },
+          { menu: "오뎅탕", kcal: 260, tags: ["solo","two","group"], reason: "쏘맥 텐션을 국물로 잡아주면 페이스가 좋아져요." },
+        ],
+        chinese: [
+          { menu: "탕수육", kcal: 680, tags: ["two","group"], reason: "달콤새콤+탄산 조합이 쏘맥과 안정적!" },
+          { menu: "깐풍기", kcal: 640, tags: ["two","group"], reason: "짭짤+매콤한 소스가 쏘맥의 타격감과 어울려요." },
+          { menu: "고추잡채 + 꽃빵", kcal: 620, tags: ["two","group"], reason: "풍미 강한 볶음류가 쏘맥과 잘 맞습니다." },
+        ],
+        japanese: [
+          { menu: "가라아게", kcal: 510, tags: ["two","group"], reason: "바삭한 튀김+쏘맥은 회식 끝판왕." },
+          { menu: "야키토리(닭꼬치)", kcal: 420, tags: ["solo","two","group"], reason: "짭짤한 꼬치가 쏘맥을 계속 부르게 해요." },
+          { menu: "오코노미야키", kcal: 640, tags: ["two","group"], reason: "소스 감칠맛 + 쏘맥 청량감 조합이 좋아요." },
+        ],
+        western: [
+          { menu: "피자", kcal: 820, tags: ["group"], reason: "쏘맥엔 공유형 ‘헤비 안주’가 최고예요." },
+          { menu: "버팔로 윙", kcal: 610, tags: ["two","group"], reason: "매콤짭짤한 윙이 쏘맥과 찰떡." },
+          { menu: "나초 + 살사", kcal: 390, tags: ["solo","two","group"], reason: "가볍게 시작하고 싶을 때 좋아요." },
+          { menu: "소시지 플래터", kcal: 760, tags: ["group"], reason: "회식/모임에서 돌려먹기 좋은 국민 안주." },
+        ]
+      },
+
+      makgeolli: {
+        korean: [
+          { menu: "김치전", kcal: 520, tags: ["two","group"], reason: "막걸리 산미와 전의 기름짐이 균형을 잡아요." },
+          { menu: "부추전", kcal: 470, tags: ["two","group"], reason: "향긋한 부추와 막걸리의 부드러움이 잘 맞아요." },
+          { menu: "도토리묵무침", kcal: 240, tags: ["solo","two","group"], reason: "담백+새콤매콤 양념이 찰떡!" },
+          { menu: "감자전", kcal: 430, tags: ["two","group"], reason: "고소한 맛이 막걸리와 편안하게 어울려요." },
+        ],
+        chinese: [
+          { menu: "유린기", kcal: 620, tags: ["two","group"], reason: "새콤한 소스가 막걸리의 부드러움과 조화로워요." },
+          { menu: "가지튀김", kcal: 540, tags: ["two","group"], reason: "부드러운 식감과 은은한 단맛이 잘 맞아요." }
+        ],
+        japanese: [
+          { menu: "모둠 튀김(텐푸라)", kcal: 690, tags: ["two","group"], reason: "튀김의 고소함이 막걸리와 궁합 좋아요." },
+          { menu: "오코노미야키", kcal: 640, tags: ["two","group"], reason: "소스 풍미와 막걸리의 부드러움이 잘 어울려요." }
+        ],
+        western: [
+          { menu: "치즈 플래터(브리/체다)", kcal: 410, tags: ["solo","two","group"], reason: "막걸리의 은은한 단맛과 치즈가 의외로 잘 맞아요." },
+          { menu: "버섯 크림수프 + 빵", kcal: 480, tags: ["solo","two"], reason: "부드러운 질감이 막걸리의 텍스처와 조화로워요." },
+          { menu: "감자튀김(갈릭/트러플)", kcal: 520, tags: ["two","group"], reason: "고소한 감자와 막걸리 산미가 밸런스를 맞춰요." }
+        ]
+      },
+
+      wine: {
+        korean: [
+          { menu: "불고기", kcal: 650, tags: ["two","group"], reason: "달큰한 양념이 와인의 과실향과 잘 맞아요." },
+          { menu: "곶감 + 견과 + 치즈", kcal: 420, tags: ["solo","two","group"], reason: "단짠 조합이 와인과 깔끔해요." },
+          { menu: "잡채", kcal: 520, tags: ["two","group"], reason: "은은한 단맛과 향이 와인과 무난하게 어울려요." }
+        ],
+        chinese: [
+          { menu: "멘보샤", kcal: 690, tags: ["two","group"], reason: "고소한 튀김 + 와인 산미 조합이 좋아요." },
+          { menu: "깐풍새우", kcal: 640, tags: ["two","group"], reason: "달콤매콤 소스가 와인과 의외로 잘 맞아요." }
+        ],
+        japanese: [
+          { menu: "연어 사시미", kcal: 430, tags: ["solo","two","group"], reason: "기름진 연어와 와인 산미가 균형을 잡아요." },
+          { menu: "명란 크림 우동", kcal: 720, tags: ["two"], reason: "크리미함과 와인의 산미가 조화로워요." }
+        ],
+        western: [
+          { menu: "치즈 플래터 + 올리브", kcal: 460, tags: ["solo","two","group"], reason: "와인의 기본 짝꿍. 산미/타닌을 부드럽게 받아줘요." },
+          { menu: "파스타(토마토/크림)", kcal: 780, tags: ["two","group"], reason: "토마토는 산미, 크림은 바디감으로 와인과 잘 맞아요." },
+          { menu: "프로슈토(하몽) + 멜론", kcal: 390, tags: ["two","group"], reason: "짠맛+단맛 대비가 와인과 환상이에요." },
+          { menu: "브루스케타", kcal: 320, tags: ["solo","two","group"], reason: "가볍게 집어먹기 좋고 와인과 산뜻해요." }
+        ]
+      },
+
+      whisky: {
+        korean: [
+          { menu: "육포 + 견과", kcal: 320, tags: ["solo","two","group"], reason: "짭짤한 감칠맛이 위스키 풍미를 살려줘요." },
+          { menu: "훈제오리", kcal: 610, tags: ["two","group"], reason: "스모키한 풍미가 위스키와 잘 맞아요." },
+          { menu: "불고기 육전", kcal: 540, tags: ["two","group"], reason: "진한 감칠맛이 위스키와 안정적으로 어울려요." }
+        ],
+        chinese: [
+          { menu: "오향장육", kcal: 680, tags: ["two","group"], reason: "향신료 풍미가 위스키와 잘 어울립니다." },
+          { menu: "마파두부(덜 매운)", kcal: 560, tags: ["two","group"], reason: "짭짤한 감칠맛이 위스키와 잘 맞아요." }
+        ],
+        japanese: [
+          { menu: "훈제연어", kcal: 390, tags: ["solo","two","group"], reason: "스모키/짭짤한 맛이 위스키와 찰떡이에요." },
+          { menu: "가라아게", kcal: 510, tags: ["two","group"], reason: "튀김의 고소함이 위스키와 잘 맞아요." }
+        ],
+        western: [
+          { menu: "다크 초콜릿(70%+)", kcal: 260, tags: ["solo","two","group"], reason: "위스키의 오크향과 다크초콜릿이 잘 어울려요." },
+          { menu: "블루치즈 + 꿀", kcal: 340, tags: ["solo","two"], reason: "강한 풍미를 위스키가 잡아주고 꿀이 연결해줘요." },
+          { menu: "스테이크(후추/버터)", kcal: 780, tags: ["two","group"], reason: "진한 감칠맛이 위스키의 풍미를 더 살려줘요." }
+        ]
+      }
+    };
+
+    const alcoholLabel = { soju:"소주", beer:"맥주", somaek:"쏘맥", makgeolli:"막걸리", wine:"와인", whisky:"위스키" };
+    const cuisineLabel = { korean:"한식", chinese:"중식", japanese:"일식", western:"양식" };
+    const situationLabel = { solo:"혼술", two:"2인", group:"모임" };
+
+    let lastPickKey = null;
+    let lastMenuName = null;
+
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function getPool(alcohol, cuisine, situation) {
+      const all = (data?.[alcohol]?.[cuisine] ?? []);
+      const filtered = all.filter(item => (item.tags || []).includes(situation));
+      return (filtered.length > 0) ? filtered : all;
+    }
+
+    function chooseItem(pool, avoidMenuName = null) {
+      if (!pool || pool.length === 0) return null;
+      if (!avoidMenuName) return pickRandom(pool);
+      const candidates = pool.filter(x => x.menu !== avoidMenuName);
+      return (candidates.length > 0) ? pickRandom(candidates) : pickRandom(pool);
+    }
+
+    function renderResult(alcohol, cuisine, situation, item, poolSize) {
+      const resultEl = document.getElementById("result");
+      if (!item) {
+        resultEl.innerHTML = `
+          <div>
+            <span class="badge">술: ${alcoholLabel[alcohol] ?? alcohol}</span>
+            <span class="badge">카테고리: ${cuisineLabel[cuisine] ?? cuisine}</span>
+            <span class="badge">상황: ${situationLabel[situation] ?? situation}</span>
+          </div>
+          <div class="menu">추천 데이터가 없어요 😅</div>
+          <div class="reason">다른 조합으로 선택해보세요.</div>
+        `;
+        return;
+      }
+
+      resultEl.innerHTML = `
+        <div>
+          <span class="badge">술: ${alcoholLabel[alcohol]}</span>
+          <span class="badge">카테고리: ${cuisineLabel[cuisine]}</span>
+          <span class="badge">상황: ${situationLabel[situation]}</span>
+        </div>
+        <div class="menu">✅ 추천: ${item.menu}</div>
+        <div class="meta">🔥 1인분 칼로리: <b>${item.kcal ?? "?"} kcal</b> · 후보군: ${poolSize}개</div>
+        <div class="reason">💡 이유: ${item.reason ?? "오늘 분위기에 딱 맞는 조합이에요!"}</div>
+      `;
+    }
+
+    function recommend(isAnother = false) {
+      const alcohol = document.getElementById("alcohol").value;
+      const cuisine = document.getElementById("cuisine").value;
+      const situation = document.getElementById("situation").value;
+
+      const key = `${alcohol}|${cuisine}|${situation}`;
+      const pool = getPool(alcohol, cuisine, situation);
+
+      const avoid = (isAnother && key === lastPickKey) ? lastMenuName : null;
+      const item = chooseItem(pool, avoid);
+
+      lastPickKey = key;
+      lastMenuName = item?.menu ?? null;
+
+      renderResult(alcohol, cuisine, situation, item, pool.length);
+    }
+
+    document.getElementById("btnRecommend").addEventListener("click", () => recommend(false));
+    document.getElementById("btnAnother").addEventListener("click", () => recommend(true));
+  </script>
 </body>
 </html>
